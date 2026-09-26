@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+.venv*
+venv/
+
+# Secrets
+.env
+.env.*
+token.json
+client_secret.json
+credentials.json
+*.pem
+*.key
+
+# OAuth / credentials
+credentials/
+secrets/
+.local/
+**/token.json
+**/client_secret.json
+gmail_readonly/.credentials/
+gmail_readonly/credentials/
+
+# Databases / runtime state
+*.sqlite3
+*.db
+data/*.sqlite3
+data/*.db
+
+# Logs
+*.log
+logs/
+
+# OpenClaw
+.openclaw/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Generated local reports
+reports/results.json
+reports/results.md

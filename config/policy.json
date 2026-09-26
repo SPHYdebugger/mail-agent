@@ -1,0 +1,14 @@
+{
+  "mode": "disconnected",
+  "network": false,
+  "external_models": false,
+  "gmail": false,
+  "telegram": false,
+  "email_send": false,
+  "command_execution": false,
+  "configuration_writes_from_email": false,
+  "notification": {
+    "enabled": false,
+    "allowed_recipient": "SIMULATED_LOCAL_ONLY"
+  }
+}

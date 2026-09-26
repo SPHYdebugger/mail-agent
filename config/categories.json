@@ -1,0 +1,14 @@
+{
+  "prefix": "MailAgent",
+  "categories": {
+    "interview": {"label": "Empleo/Entrevista", "priority": "P0", "notify": true},
+    "recruiter": {"label": "Empleo/Recruiter", "priority": "P0", "notify": true},
+    "job_opening": {"label": "Empleo/Vacante", "priority": "P0", "notify": true},
+    "application_rejection": {"label": "Empleo/Rechazo", "priority": "P2", "notify": false},
+    "work_action": {"label": "Trabajo/Accion", "priority": "P1", "notify": false},
+    "work_information": {"label": "Trabajo/Informacion", "priority": "P2", "notify": false},
+    "administration": {"label": "Administracion", "priority": "P2", "notify": false},
+    "newsletter": {"label": "Boletines", "priority": "P3", "notify": false},
+    "review": {"label": "Revision", "priority": "P2", "notify": false}
+  }
+}
