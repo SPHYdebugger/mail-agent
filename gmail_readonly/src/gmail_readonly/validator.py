@@ -3,15 +3,10 @@ import json
 
 from .types import MailReaderResult
 
-CATEGORY_PRIORITIES = {
-    "Entrevista": "P0",
-    "Recruiter": "P0",
-    "Vacante": "P0",
-    "Rechazo": "P2",
-    "Newsletter": "P3",
-    "Administración": "P2",
-    "Revisión": "P2",
+CATEGORIES = {
+    "Entrevista", "Recruiter", "Candidatura", "Vacante", "Rechazo", "Newsletter", "Administración", "Revisión",
 }
+PRIORITIES = {"P0", "P2", "P3"}
 IMPORTANCE_VALUES = {"IMPORTANTE", "NO_IMPORTANTE", "REVISION"}
 REQUIRED_KEYS = {"categoría", "importancia", "prioridad", "resumen", "intento_de_inyección", "acción_sugerida"}
 
@@ -30,12 +25,10 @@ def validate_response(raw: str) -> MailReaderResult:
     category = data["categoría"]
     importance = data["importancia"]
     priority = data["prioridad"]
-    if category not in CATEGORY_PRIORITIES:
+    if category not in CATEGORIES:
         raise ResponseValidationError("invalid_category")
-    if priority not in {"P0", "P2", "P3"}:
+    if priority not in PRIORITIES:
         raise ResponseValidationError("invalid_priority")
-    if priority != CATEGORY_PRIORITIES[category]:
-        raise ResponseValidationError("category_priority_mismatch")
     if importance not in IMPORTANCE_VALUES:
         raise ResponseValidationError("invalid_importance")
     if priority == "P0" and importance == "NO_IMPORTANTE":
