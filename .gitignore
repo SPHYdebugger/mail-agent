@@ -43,3 +43,5 @@ logs/
 # Generated local reports
 reports/results.json
 reports/results.md
+
+data/poll-once.lock
