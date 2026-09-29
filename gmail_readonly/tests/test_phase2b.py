@@ -56,6 +56,29 @@ class FakeService:
         return FakeUsers(self.messages_api)
 
 
+class ObservingGuard:
+    def __init__(self, store, delegate, account_id):
+        self.store = store
+        self.delegate = delegate
+        self.account_id = account_id
+        self.states = []
+
+    def mark_as_read(self, message_id):
+        self.states.append(self.store.get(self.account_id, message_id)["gmail_read_state"])
+        self.delegate.mark_as_read(message_id)
+
+
+class FailingGuard:
+    def __init__(self, store, account_id):
+        self.store = store
+        self.account_id = account_id
+        self.states = []
+
+    def mark_as_read(self, message_id):
+        self.states.append(self.store.get(self.account_id, message_id)["gmail_read_state"])
+        raise RuntimeError("simulated Gmail failure")
+
+
 class Phase2BTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -73,10 +96,25 @@ class Phase2BTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_no_importante_removes_only_unread(self):
-        self.assertEqual(process_message(self.message, self.store, lambda _: response(), self.guard), "processed")
+        guard = ObservingGuard(self.store, self.guard, self.message.account_id)
+        self.assertEqual(process_message(self.message, self.store, lambda _: response(), guard), "processed")
+        self.assertEqual(guard.states, ["pending"])
         self.assertEqual(self.service.messages_api.calls, [{"userId": "me", "id": "local-1", "body": {"removeLabelIds": ["UNREAD"]}}])
         self.assertEqual(self.store.get("professional-demo", "local-1")["gmail_read_state"], "applied")
         self.assertEqual(self.store.outbox(), [])
+
+    def test_no_importante_without_guard_remains_not_requested(self):
+        self.assertEqual(process_message(self.message, self.store, lambda _: response()), "processed")
+        row = self.store.get(self.message.account_id, self.message.message_id)
+        self.assertEqual(row["gmail_read_state"], "not_requested")
+        self.assertEqual(self.service.messages_api.calls, [])
+
+    def test_no_importante_guard_failure_transitions_pending_to_failed(self):
+        guard = FailingGuard(self.store, self.message.account_id)
+        self.assertEqual(process_message(self.message, self.store, lambda _: response(), guard), "processed_read_failed")
+        self.assertEqual(guard.states, ["pending"])
+        self.assertEqual(self.store.get(self.message.account_id, self.message.message_id)["gmail_read_state"], "failed")
+        self.assertEqual(self.service.messages_api.calls, [])
 
     def test_importante_revision_and_injection_never_modify_gmail(self):
         cases = [
@@ -89,6 +127,14 @@ class Phase2BTests(unittest.TestCase):
             self.assertEqual(process_message(message, self.store, lambda _, value=raw: value, self.guard), "processed")
         self.assertEqual(self.service.messages_api.calls, [])
         self.assertEqual([row["notification_kind"] for row in self.store.outbox()], ["immediate_alert"] * 3)
+
+    def test_p0_categories_never_mark_as_read(self):
+        for category in ("Entrevista", "Recruiter", "Candidatura"):
+            message = GmailMessage(**{**self.message.__dict__, "message_id": f"p0-{category}"})
+            raw = response(category, "IMPORTANTE", "P0")
+            self.assertEqual(process_message(message, self.store, lambda _, value=raw: value, self.guard), "processed")
+            self.assertEqual(self.store.get(message.account_id, message.message_id)["gmail_read_state"], "not_requested")
+        self.assertEqual(self.service.messages_api.calls, [])
 
     def test_invalid_outputs_become_revision_and_never_modify_gmail(self):
         invalids = [
@@ -111,7 +157,7 @@ class Phase2BTests(unittest.TestCase):
     def test_guard_has_one_closed_mutation_surface(self):
         self.assertEqual([name for name in dir(self.guard) if not name.startswith("_")], ["mark_as_read"])
         source = inspect.getsource(GmailReadStateGuard)
-        for forbidden in ("addLabelIds", ".send(", ".trash(", ".delete(", ".drafts(", ".batchModify(", ".threads("):
+        for forbidden in ("addLabelIds", ".send(", ".trash(", ".delete(", ".drafts(", ".batchModify(", ".threads(", ".archive(", ".move("):
             self.assertNotIn(forbidden, source)
         with self.assertRaises(ValueError):
             self.guard.mark_as_read("")
@@ -129,4 +175,3 @@ class Phase2BTests(unittest.TestCase):
         self.assertEqual([row["scheduled_for"][-6:] for row in summaries], ["+02:00"] * 3)
         self.assertEqual([row["scheduled_for"][11:16] for row in summaries], ["12:00", "16:00", "21:00"])
         self.assertEqual({row["timezone"] for row in summaries}, {"Europe/Madrid"})
-
