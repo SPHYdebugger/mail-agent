@@ -18,7 +18,11 @@ def authorize(client_secrets: Path, token_path: Path):
             credentials.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets), SCOPES)
-            credentials = flow.run_local_server(host="127.0.0.1", port=0)
+            credentials = flow.run_local_server(
+                host="127.0.0.1",
+                port=8765,
+                open_browser=False,
+            )
         token_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         token_path.write_text(credentials.to_json(), encoding="utf-8")
         token_path.chmod(0o600)

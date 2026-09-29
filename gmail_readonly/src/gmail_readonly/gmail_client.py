@@ -16,6 +16,35 @@ class GmailReadonlyClient:
         ).execute()
         return [item["id"] for item in response.get("messages", [])]
 
+    def get_metadata(self, message_id: str) -> dict[str, str]:
+        raw = self.service.users().messages().get(
+            userId="me",
+            id=message_id,
+            format="metadata",
+            metadataHeaders=["Date", "From", "Subject"],
+        ).execute()
+        headers = {item["name"].lower(): item["value"] for item in raw.get("payload", {}).get("headers", [])}
+        date = headers.get("date", "")
+        try:
+            received_at = parsedate_to_datetime(date).isoformat()
+        except (TypeError, ValueError):
+            received_at = date
+        return {
+            "messageId": raw["id"],
+            "threadId": raw["threadId"],
+            "fecha": received_at,
+            "remitente": headers.get("from", ""),
+            "asunto": headers.get("subject", ""),
+        }
+
+    def get_label_ids(self, message_id: str) -> list[str]:
+        raw = self.service.users().messages().get(
+            userId="me",
+            id=message_id,
+            format="minimal",
+        ).execute()
+        return raw.get("labelIds", [])
+
     def get_message(self, message_id: str) -> GmailMessage:
         raw = self.service.users().messages().get(userId="me", id=message_id, format="full").execute()
         headers = {item["name"].lower(): item["value"] for item in raw.get("payload", {}).get("headers", [])}
